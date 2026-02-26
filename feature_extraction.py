@@ -1,85 +1,50 @@
-import pandas as pd
 import re
 from urllib.parse import urlparse
-
-# Load dataset
-df = pd.read_csv("clean_urldata.csv")
+import numpy as np
 
 # =========================
-# FEATURE FUNCTIONS (SAFE)
+# FEATURE FUNCTIONS
 # =========================
 
 def url_length(url):
-    try:
-        return len(url)
-    except:
-        return 0
+    return len(url)
 
 def has_ip(url):
-    try:
-        return 1 if re.search(r"\d+\.\d+\.\d+\.\d+", url) else 0
-    except:
-        return 0
+    return 1 if re.search(r"\d+\.\d+\.\d+\.\d+", url) else 0
 
 def has_at(url):
-    try:
-        return 1 if "@" in url else 0
-    except:
-        return 0
+    return 1 if "@" in url else 0
 
 def has_hyphen(url):
-    try:
-        domain = urlparse(url).netloc
-        return 1 if "-" in domain else 0
-    except:
-        return 0
+    domain = urlparse(url).netloc
+    return 1 if "-" in domain else 0
 
 def dot_count(url):
-    try:
-        return url.count(".")
-    except:
-        return 0
+    return url.count(".")
 
 def has_https(url):
-    try:
-        return 1 if url.startswith("https") else 0
-    except:
-        return 0
+    return 1 if url.startswith("https") else 0
 
 def has_www(url):
-    try:
-        return 1 if "www" in url else 0
-    except:
-        return 0
+    return 1 if "www" in url else 0
 
 def digit_count(url):
-    try:
-        return sum(char.isdigit() for char in url)
-    except:
-        return 0
+    return sum(char.isdigit() for char in url)
 
 # =========================
-# APPLY FEATURES
+# MAIN FUNCTION (IMPORTANT)
 # =========================
 
-df['url_length'] = df['url'].apply(url_length)
-df['has_ip'] = df['url'].apply(has_ip)
-df['has_at'] = df['url'].apply(has_at)
-df['has_hyphen'] = df['url'].apply(has_hyphen)
-df['dot_count'] = df['url'].apply(dot_count)
-df['has_https'] = df['url'].apply(has_https)
-df['has_www'] = df['url'].apply(has_www)
-df['digit_count'] = df['url'].apply(digit_count)
+def extract_features(url):
+    features = [
+        url_length(url),
+        has_ip(url),
+        has_at(url),
+        has_hyphen(url),
+        dot_count(url),
+        has_https(url),
+        has_www(url),
+        digit_count(url)
+    ]
 
-# =========================
-# FINAL CLEANUP
-# =========================
-
-# Keep only numeric features + target
-df = df.drop(columns=['url', 'label'])
-
-# Save final dataset
-df.to_csv("features.csv", index=False)
-
-print("✅ FEATURE EXTRACTION COMPLETED SUCCESSFULLY")
-print(df.head())
+    return np.array(features).reshape(1, -1)

@@ -1,105 +1,91 @@
 import streamlit as st
 import joblib
-import re
-from urllib.parse import urlparse
-import pandas as pd
+import time
+import numpy as np
+from feature_extraction import extract_features
 
-# PAGE CONFIG
+# ================= PAGE CONFIG =================
 st.set_page_config(
     page_title="Phishing URL Detector",
     page_icon="🔐",
     layout="centered"
 )
 
-st.title("🔐 Phishing URL Detection System")
-st.write("Enter a website URL to check whether it is **Phishing** or **Legitimate**.")
+# ================= CUSTOM STYLE =================
+st.markdown("""
+<style>
+body {background-color: #0f172a;}
+.main-title {
+    text-align:center;
+    font-size:40px;
+    font-weight:700;
+    color:#22c55e;
+}
+.sub-text {
+    text-align:center;
+    color:#94a3b8;
+    margin-bottom:25px;
+}
+.result-safe {
+    padding:20px;
+    border-radius:12px;
+    background-color:#052e16;
+    color:#4ade80;
+    font-size:22px;
+    text-align:center;
+}
+.result-phish {
+    padding:20px;
+    border-radius:12px;
+    background-color:#3f0000;
+    color:#f87171;
+    font-size:22px;
+    text-align:center;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# LOAD MODEL (SAFE)
+# ================= TITLE =================
+st.markdown('<p class="main-title">🔐 Phishing URL Detection System</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-text">Machine Learning based real‑time website safety analyzer</p>', unsafe_allow_html=True)
+
+# ================= LOAD MODEL =================
+@st.cache_resource
+def load_model():
+    return joblib.load("phishing_model.pkl")
+
 try:
-    model = joblib.load("phishing_model.pkl")
+    model = load_model()
 except Exception as e:
-    st.error("❌ Failed to load model")
+    st.error("Model loading failed")
     st.code(str(e))
     st.stop()
 
-# FEATURE EXTRACTION FUNCTIONS
-def url_length(url):
-    try:
-        return len(url)
-    except:
-        return 0
+# ================= INPUT =================
+url = st.text_input("🔗 Enter Website URL", placeholder="https://example.com/login")
 
-def has_ip(url):
-    try:
-        return 1 if re.search(r"\d+\.\d+\.\d+\.\d+", url) else 0
-    except:
-        return 0
-
-def has_at(url):
-    try:
-        return 1 if "@" in url else 0
-    except:
-        return 0
-
-def has_hyphen(url):
-    try:
-        domain = urlparse(url).netloc
-        return 1 if "-" in domain else 0
-    except:
-        return 0
-
-def dot_count(url):
-    try:
-        return url.count(".")
-    except:
-        return 0
-
-def has_https(url):
-    try:
-        return 1 if url.startswith("https") else 0
-    except:
-        return 0
-
-def has_www(url):
-    try:
-        return 1 if "www" in url else 0
-    except:
-        return 0
-
-def digit_count(url):
-    try:
-        return sum(char.isdigit() for char in url)
-    except:
-        return 0
-
-# USER INPUT
-url = st.text_input("🔗 Enter Website URL")
-
-# PREDICTION
-if st.button("Check URL"):
+# ================= ANALYSIS =================
+if st.button("Analyze Website"):
     if url.strip() == "":
-        st.warning("⚠️ Please enter a URL")
+        st.warning("Please enter a valid URL")
     else:
-        features = {
-            "url_length": url_length(url),
-            "has_ip": has_ip(url),
-            "has_at": has_at(url),
-            "has_hyphen": has_hyphen(url),
-            "dot_count": dot_count(url),
-            "has_https": has_https(url),
-            "has_www": has_www(url),
-            "digit_count": digit_count(url)
-        }
+        with st.spinner("Scanning website using AI model..."):
+            time.sleep(1.5)
+            features = extract_features(url)
+            prediction = model.predict(features)[0]
+            prob = model.predict_proba(features)[0][1]
 
-        df = pd.DataFrame([features])
+        # Risk meter
+        st.subheader("Risk Score")
+        st.progress(int(prob * 100))
+        st.metric("Phishing Probability", f"{prob*100:.2f}%")
 
-        prediction = model.predict(df)[0]
-
+        # Result box
         if prediction == 1:
-            st.error("🚨 PHISHING WEBSITE DETECTED!")
+            st.markdown('<div class="result-phish">🚨 Warning: Phishing Website Detected</div>', unsafe_allow_html=True)
         else:
-            st.success("✅ LEGITIMATE WEBSITE")
+            st.markdown('<div class="result-safe">✅ This Website Appears Legitimate</div>', unsafe_allow_html=True)
 
-# FOOTER
+# ================= FOOTER =================
 st.markdown("---")
-st.caption("Second Year Machine Learning Project | Phishing URL Detection")
+st.caption("Developed by Sanjay | Machine Learning Cybersecurity Project")
